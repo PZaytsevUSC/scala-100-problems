@@ -160,3 +160,111 @@ def encoding(a: List[Int]): List[(Int, Int)] = {
 }
 
 val en = encoding(List(1, 1, 1, 2, 2, 3, 3, 3, 3, 3, 4, 5, 6, 6, 6))
+
+// P11 - Modified run-length encoding
+
+def modifiedEncoding(a: List[Int]): List[Any] = {
+  val packs = pack(a)
+  packs.map(x => if(x.length > 1) (x.length, x.head) else x.head)
+}
+
+modifiedEncoding(List(1, 1, 1, 2, 2, 3, 3, 3, 3, 3, 4, 5, 6, 6, 6))
+
+// Function is sorted
+def isSorted[A](a: Array[A], p: (A, A) => Boolean): Boolean = {
+  def go(current: Int, next: Int): Boolean = {
+    if(next <= a.length - 1 && p(a(current), a(next))){
+      go(current + 1, next + 1)
+    }
+    else if(next == a.length){
+      true
+    }
+    else{
+      false
+    }
+  }
+
+  if(a.isEmpty || a.length == 1){
+    return true
+  }
+  go(0, 1)
+}
+
+val a = Array(1, 2, 3, 4, 5, 6)
+val b = Array(1, 2, 4, 5, 3, 6)
+
+isSorted(a, (a: Int, b: Int) => a < b)
+isSorted(b, (a: Int, b: Int) => a < b)
+
+def isSortedWithBounds[A](a: Array[A])(implicit ord: Ordering[A]): Boolean = {
+  def go(current: Int, next: Int): Boolean = {
+    if(next <= a.length - 1 && ord.lt(a(current), a(next))){
+      go(current + 1, next + 1)
+    }
+    else if(next == a.length){
+      true
+    }
+    else{
+      false
+    }
+  }
+
+  if(a.isEmpty || a.length == 1){
+    return true
+  }
+  go(0, 1)
+}
+
+import Ordering.IntOrdering
+
+isSortedWithBounds(a)
+
+// currying
+
+def partial[A, B, C](a: A, f: (A, B) => C): B => C = {
+  (b: B) => f(a, b)
+}
+
+def curry[A,B,C](f: (A, B) => C): A => (B => C) = {
+  (a: A) => partial(a, f)
+}
+
+
+sealed trait GenTree[A]
+case class GenLeaf[A](value: A) extends GenTree[A]
+case class GenNode[A](value: A, left: GenTree[A], right: GenTree[A]) extends GenTree[A]
+
+def treeFold[A, B](tree: GenTree[A], b: B)(op: (B, A) => B)(comb: (A, B, B) => B): B = tree match{
+  case GenNode(value, left, right) => comb(value, treeFold(left, b)(op)(comb), treeFold(right, b)(op)(comb))
+  case GenLeaf(value) => op(b, value)
+}
+
+val node4 = GenLeaf(4)
+val node5 = GenLeaf(5)
+val node6 = GenLeaf(6)
+val node7 = GenLeaf(7)
+
+val node2 = GenNode(2, node4, node5)
+val node3 = GenNode(3, node6, node7)
+val node1 = GenNode(1, node2, node3)
+
+def size[A](tree: GenTree[A]): Int = {
+  treeFold(tree, 0)((a: Int, b: A) => a + 1)((c: A, a: Int, b: Int) => 1 + a + b)
+}
+
+size(node1)
+
+def maximum[A](tree: GenTree[A])(implicit ord: Ordering[A], nullable: A): A = {
+  treeFold(tree, nullable)((a: A, b: A) => ord.max(a, b))((c: A, a: A, b: A) => ord.max(c, ord.max(a, b)))
+}
+
+implicit val nullable: Int = 0
+
+maximum(node1)
+
+def pathLength[A](tree: GenTree[A])(implicit ord: Ordering[Int]): Int = {
+  treeFold(tree, 0)((a: Int, b: A) => 0)((c: A, a: Int, b: Int) => 1 + ord.max(a, b))
+}
+
+pathLength(node1)
+
